@@ -1,3 +1,3 @@
-scikit-learn>=1.0.0
-pandas>=1.3.0
-numpy>=1.21.0
+# runtime = Python standard library only (json, math, os).
+# offline training would add scikit-learn/pandas/numpy, but no training
+# pipeline is currently implemented — see README "honesty notes".
