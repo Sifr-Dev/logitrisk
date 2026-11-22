@@ -1,33 +1,48 @@
+"""Re-export the illustrative coefficient artifact; no training occurs."""
+
+import argparse
 import json
-import math
+from pathlib import Path
 
-# In a real environment, this script uses scikit-learn to train on a dataset like Telco Customer Churn
-# e.g., model = LogisticRegression().fit(X_train, y_train)
-# Here we represent the final trained coefficients of the Logistic Regression model.
 
-def export_model_weights():
-    # Model: Logistic Regression
-    # Objective: Predict Probability of Customer Churn
-    
-    # These represent the learned weights (coefficients) from the training phase
-    weights = {
-        "intercept": -0.85,
-        "features": {
-            "tenure": -0.045,                  # Longer tenure decreases churn probability
-            "monthlyCharges": 0.018,           # Higher monthly charges slightly increases churn
-            "totalCharges": -0.00015,          # Marginal impact
-            "contract_Month-to-month": 1.45,   # High risk factor
-            "contract_One year": 0.05,         # Neutral
-            "contract_Two year": -1.25         # Major protective factor
-        }
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_OUTPUT = ROOT / 'model_weights.json'
+
+
+def illustrative_model():
+    """Return hand-set example values, not coefficients learned from data."""
+    return {
+        'intercept': -0.85,
+        'features': {
+            'tenure': -0.045,
+            'monthlyCharges': 0.018,
+            'totalCharges': -0.00015,
+            'contract_Month-to-month': 1.45,
+            'contract_One year': 0.05,
+            'contract_Two year': -1.25,
+        },
     }
-    
-    # Save the model to a JSON artifact for the serverless inference engine
-    with open('../model_weights.json', 'w') as f:
-        json.dump(weights, f, indent=4)
-        
-    print("[SUCCESS] Logistic Regression model trained.")
-    print("[SUCCESS] Model weights exported to model_weights.json for serverless deployment.")
 
-if __name__ == "__main__":
-    export_model_weights()
+
+def export_model_weights(output_path=DEFAULT_OUTPUT, check=False):
+    """Write the illustrative artifact, or verify it without modifying it."""
+    output_path = Path(output_path)
+    serialized = json.dumps(illustrative_model(), indent=4) + '\n'
+    if check:
+        if not output_path.exists() or output_path.read_text(encoding='utf-8') != serialized:
+            raise SystemExit(f'[FAIL] {output_path} differs from the illustrative export')
+        print(f'[OK] {output_path} matches the illustrative export; no training performed')
+        return output_path
+
+    output_path.write_text(serialized, encoding='utf-8')
+    print(f'[OK] Illustrative hand-set coefficients exported to {output_path}; no training performed')
+    return output_path
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--check', action='store_true', help='verify the shipped artifact without writing it'
+    )
+    args = parser.parse_args()
+    export_model_weights(check=args.check)
