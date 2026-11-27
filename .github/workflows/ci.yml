@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # The runtime is standard-library only; requirements.txt intentionally
+      # installs nothing. Ruff is pinned to the version this workflow was
+      # written against so a new release cannot fail the build on its own.
+      - name: Install lint tooling
+        run: python -m pip install --disable-pip-version-check ruff==0.17.6
+
+      - name: Check syntax
+        run: python -m compileall -q src api scripts tests
+
+      # Undefined names, unused imports, unreachable code and syntax errors.
+      # This is the subset the existing tree actually satisfies; the broader
+      # ruff default rule set is not clean here and is deliberately not claimed.
+      - name: Lint
+        run: python -m ruff check --select E9,F --output-format=concise .
+
+      # The documented suite: python3 -m unittest discover -s tests
+      - name: Test
+        run: python -m unittest discover -s tests -v
+
+  cli:
+    name: cli contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # The two entry points the README documents as runnable.
+      - name: CLI demo predicts the documented score
+        run: |
+          expected="$(printf 'Churn Probability: 0.7373\nRisk Level: HIGH')"
+          actual="$(python src/inference.py)"
+          printf '%s\n' "$actual"
+          if [ "$actual" != "$expected" ]; then
+            echo "unexpected CLI output" >&2
+            exit 1
+          fi
+
+      - name: Exported artifact matches the committed model
+        run: python scripts/train_model.py --check
