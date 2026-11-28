@@ -1,0 +1,9 @@
+{
+  "name": "logitrisk",
+  "description": "Churn and log analytics engine",
+  "stack": [
+    "python"
+  ],
+  "status": "active",
+  "primary_language": "Python"
+}
